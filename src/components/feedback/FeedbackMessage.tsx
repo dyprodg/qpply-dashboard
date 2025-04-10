@@ -9,7 +9,7 @@ export interface FeedbackMessageProps {
   message: string;
   createdAt: number;
   userId: string;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, email: string) => void;
 }
 
 export default function FeedbackMessage({
@@ -44,7 +44,7 @@ export default function FeedbackMessage({
             <ArrowUturnLeftIcon className="h-5 w-5" />
           </button>
           <button
-            onClick={() => onDelete(id)}
+            onClick={() => onDelete(id, email)}
             className="text-gray-400 hover:text-red-400 p-1 rounded-full hover:bg-gray-800 transition-colors"
             aria-label="Delete message"
           >

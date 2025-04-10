@@ -38,9 +38,9 @@ export default function FeedbackList() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, email: string) => {
     try {
-      await deleteFeedbackMessage(id);
+      await deleteFeedbackMessage(id, email);
       setMessages(messages.filter((msg) => msg.id !== id));
     } catch (err) {
       setError("Failed to delete the message");
