@@ -1,8 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)']);
+// The issue is here - needs to match both /sign-in and any external URLS
+const isPublicRoute = createRouteMatcher([
+  '/sign-in(.*)',
+  '/api(.*)',
+  '/static(.*)'
+]);
 
 export default clerkMiddleware(async (auth, req) => {
+  // Check for public routes including sign-in
   if (!isPublicRoute(req)) {
     await auth.protect();
   }
