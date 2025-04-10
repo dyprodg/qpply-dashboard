@@ -5,14 +5,20 @@ import FeedbackMessage from "./FeedbackMessage";
 import {
   deleteFeedbackMessage,
   getFeedbackMessages,
+  FeedbackItem,
 } from "@/lib/actions/feedback";
 
-export interface FeedbackItem {
-  id: string;
-  email: string;
-  message: string;
-  createdAt: number;
-  userId: string;
+// Validates if the object has all required properties of a FeedbackItem
+function isValidFeedbackItem(item: unknown): item is FeedbackItem {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    typeof (item as Record<string, unknown>).id === "string" &&
+    typeof (item as Record<string, unknown>).email === "string" &&
+    typeof (item as Record<string, unknown>).message === "string" &&
+    typeof (item as Record<string, unknown>).createdAt === "number" &&
+    typeof (item as Record<string, unknown>).userId === "string"
+  );
 }
 
 export default function FeedbackList() {
@@ -28,7 +34,17 @@ export default function FeedbackList() {
     setIsLoading(true);
     try {
       const data = await getFeedbackMessages();
-      setMessages(data);
+
+      // Validate each item returned from the API
+      const validData = data.filter((item) => {
+        const valid = isValidFeedbackItem(item);
+        if (!valid) {
+          console.error("Invalid feedback item format:", item);
+        }
+        return valid;
+      });
+
+      setMessages(validData);
       setError(null);
     } catch (err) {
       setError("Failed to load feedback messages");
@@ -40,10 +56,16 @@ export default function FeedbackList() {
 
   const handleDelete = async (id: string, email: string) => {
     try {
+      if (!id || !email) {
+        throw new Error("Both ID and email are required to delete a message");
+      }
+
       await deleteFeedbackMessage(id, email);
       setMessages(messages.filter((msg) => msg.id !== id));
     } catch (err) {
-      setError("Failed to delete the message");
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to delete the message";
+      setError(errorMessage);
       console.error(err);
     }
   };

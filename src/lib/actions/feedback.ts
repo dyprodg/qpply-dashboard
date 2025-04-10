@@ -15,10 +15,16 @@ export interface FeedbackItem {
 
 // Transforms DynamoDB item format to our application format
 function transformDynamoDBItem(item: Record<string, unknown>): FeedbackItem {
-  // Handle items that already have the right format
-  if (typeof item.id === 'string' && !item.id.S) {
+  // Check if item has DynamoDB-style attributes or is already in JS format
+  const isRawDynamoDBFormat = item.id && 
+    typeof item.id === 'object' && 
+    item.id !== null && 
+    'S' in item.id;
+  
+  // Handle items that already have the right format (JS objects)
+  if (!isRawDynamoDBFormat) {
     return {
-      id: item.id,
+      id: item.id as string,
       email: item.email as string,
       message: item.message as string,
       createdAt: item.createdAt as number,
@@ -102,6 +108,10 @@ export async function getFeedbackItem(id: string): Promise<FeedbackItem | null> 
 }
 
 export async function deleteFeedbackMessage(id: string, email: string): Promise<void> {
+  if (!id || !email) {
+    throw new Error('Both id and email are required to delete a feedback message');
+  }
+
   try {
     // In DynamoDB, we need BOTH the hash key and range key for delete operations
     const params = {
@@ -114,12 +124,27 @@ export async function deleteFeedbackMessage(id: string, email: string): Promise<
     
     console.log(`Attempting to delete from ${FEEDBACK_TABLE_NAME} with composite key:`, JSON.stringify(params, null, 2));
     
+    // Try the delete operation
     const result = await ddbClient.send(new DeleteItemCommand(params));
     console.log("Delete success:", result);
     
     revalidatePath('/');
   } catch (error) {
+    // Provide more detailed error messages
     console.error('Error deleting feedback message:', error);
-    throw new Error('Failed to delete feedback message');
+    
+    if (error instanceof Error) {
+      if (error.name === 'ResourceNotFoundException') {
+        throw new Error(`Table ${FEEDBACK_TABLE_NAME} not found`);
+      } else if (error.name === 'ValidationException') {
+        throw new Error(`Invalid key format for table ${FEEDBACK_TABLE_NAME}. Make sure both id and email are provided.`);
+      } else if (error.name === 'AccessDeniedException' || error.name === 'UnrecognizedClientException') {
+        throw new Error('AWS credentials are invalid or missing. Check your environment variables.');
+      } else {
+        throw new Error(`Failed to delete message: ${error.message}`);
+      }
+    } else {
+      throw new Error('An unknown error occurred while deleting the message');
+    }
   }
 } 

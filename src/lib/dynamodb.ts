@@ -1,17 +1,32 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { 
-  DynamoDBDocumentClient 
-} from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
-// Log environment variables (without sensitive values)
-console.log("AWS Region:", process.env.REGION);
-console.log("FEEDBACK_TABLE_NAME:", process.env.DYNAMODB_TABLE_NAME_FEEDBACK);
+// Validate AWS credentials are available
+const accessKeyId = process.env.ACCESS_KEY_ID;
+const secretAccessKey = process.env.SECRET_ACCESS_KEY;
+const region = process.env.REGION || "eu-central-1";
+const feedbackTableName = process.env.DYNAMODB_TABLE_NAME_FEEDBACK;
 
+// Log environment variables for debugging (without showing full secrets)
+console.log("AWS Region:", region);
+console.log("FEEDBACK_TABLE_NAME:", feedbackTableName);
+console.log("ACCESS_KEY_ID available:", !!accessKeyId);
+console.log("SECRET_ACCESS_KEY available:", !!secretAccessKey);
+
+if (!accessKeyId || !secretAccessKey) {
+  console.warn("AWS credentials are missing. DynamoDB operations will fail.");
+}
+
+if (!feedbackTableName) {
+  console.warn("DYNAMODB_TABLE_NAME_FEEDBACK is not set. Using default: qpply-feedback-messages");
+}
+
+// Create DynamoDB client with environment variables or defaults
 const client = new DynamoDBClient({
-  region: process.env.REGION || "eu-central-1",
+  region,
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.SECRET_ACCESS_KEY || "",
+    accessKeyId: accessKeyId || "",
+    secretAccessKey: secretAccessKey || "",
   },
 });
 
@@ -29,4 +44,4 @@ export const docClient = DynamoDBDocumentClient.from(client, {
 });
 
 export const ddbClient = client;
-export const FEEDBACK_TABLE_NAME = process.env.DYNAMODB_TABLE_NAME_FEEDBACK || "qpply-feedback-messages"; 
+export const FEEDBACK_TABLE_NAME = feedbackTableName || "qpply-feedback-messages"; 
